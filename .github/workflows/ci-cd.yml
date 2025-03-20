@@ -71,20 +71,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          npm install -g mocha esm  # Install esm globally
+          npm install axios          # Install test dependencies
+
       - name: Run API tests
         run: |
-          # Install test dependencies
-          npm install -g mocha
-          npm install axios
-
-          # Basic smoke tests (modify according to your actual endpoints)
           echo "Starting tests..."
-          
-          # Test Authentication Service
-          mocha --exit -r esm <<EOF
+          mocha --require esm --exit <<EOF
           const assert = require('assert');
           const axios = require('axios');
-          
+        
           describe('Services', () => {
             it('Auth Service /login', async () => {
               const res = await axios.post('http://localhost:3000/login', {
