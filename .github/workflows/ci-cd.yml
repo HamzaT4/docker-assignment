@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_PREFIX: HamzaT4/video-streaming  
+  IMAGE_PREFIX: hamzat4/video-streaming  
 
 jobs:
   build-push:
