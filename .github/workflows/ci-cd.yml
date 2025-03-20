@@ -1,57 +1,120 @@
-name: Docker Assignment CI/CD
+name: Build, Test, Push, Deploy
 
 on:
   push:
     branches: [ "main" ]
 
+env:
+  REGISTRY: docker.io
+  IMAGE_PREFIX: HamzaT4/video-streaming  
+
 jobs:
-  build-and-test:
+  build-push:
     runs-on: ubuntu-latest
     steps:
-    # --------------------------------------
-    # 1. Checkout Code
-    # --------------------------------------
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # --------------------------------------
-    # 2. Build Docker Images
-    # --------------------------------------
-    - name: Build Auth Service
-      run: docker build -t auth-service ./auth
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Build Upload Service
-      run: docker build -t upload-service ./upload
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build Streaming Service
-      run: docker build -t streaming-service ./streaming
+      - name: Build and push Auth Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./auth
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-auth:latest
+          push: true
 
-    - name: Build File Service
-      run: docker build -t file-service ./file-service
+      - name: Build and push Upload Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./upload-web
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-upload-web:latest
+          push: true
 
-    # --------------------------------------
-    # 3. Run Tests (Add your actual tests here)
-    # --------------------------------------
-    - name: Run Tests
-      run: |
-        echo "Running unit tests..."
-        # Example: pytest tests/ (if you have tests)
-        echo "Tests completed!"
+      - name: Build and push Streaming Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./streaming-web
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-streaming-web:latest
+          push: true
+
+      - name: Build and push File Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./file-system
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-file-system:latest
+          push: true
+
+  test:
+    needs: [build-push]
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: videodb
+        ports:
+          - 3306:3306
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run API tests
+        run: |
+          # Install test dependencies
+          npm install -g mocha
+          npm install axios
+
+          # Basic smoke tests (modify according to your actual endpoints)
+          echo "Starting tests..."
+          
+          # Test Authentication Service
+          mocha --exit -r esm <<EOF
+          const assert = require('assert');
+          const axios = require('axios');
+          
+          describe('Services', () => {
+            it('Auth Service /login', async () => {
+              const res = await axios.post('http://localhost:3000/login', {
+                username: 'admin',
+                password: 'admin'
+              });
+              assert.equal(res.status, 200);
+            });
+
+            it('Upload Service health check', async () => {
+              const res = await axios.get('http://localhost:3001');
+              assert.equal(res.status, 200);
+            });
+          });
+          EOF
 
   deploy:
-    needs: [build-and-test]
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
-    # --------------------------------------
-    # 4. Deploy to Production
-    # --------------------------------------
-    - name: Deploy to Server
-      uses: appleboy/ssh-action@v0.1.10
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        script: |
-          cd ~/video-streaming
-          docker-compose down
-          docker-compose up -d
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.AWS_EC2_IP }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+           
+            cd ~/docker-assignment
+            docker-compose down
+            docker-compose pull
+            docker-compose up -d
+            docker ps
