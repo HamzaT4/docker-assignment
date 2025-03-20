@@ -1,0 +1,57 @@
+name: Docker Assignment CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    # --------------------------------------
+    # 1. Checkout Code
+    # --------------------------------------
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # --------------------------------------
+    # 2. Build Docker Images
+    # --------------------------------------
+    - name: Build Auth Service
+      run: docker build -t auth-service ./auth
+
+    - name: Build Upload Service
+      run: docker build -t upload-service ./upload
+
+    - name: Build Streaming Service
+      run: docker build -t streaming-service ./streaming
+
+    - name: Build File Service
+      run: docker build -t file-service ./file-service
+
+    # --------------------------------------
+    # 3. Run Tests (Add your actual tests here)
+    # --------------------------------------
+    - name: Run Tests
+      run: |
+        echo "Running unit tests..."
+        # Example: pytest tests/ (if you have tests)
+        echo "Tests completed!"
+
+  deploy:
+    needs: [build-and-test]
+    runs-on: ubuntu-latest
+    steps:
+    # --------------------------------------
+    # 4. Deploy to Production
+    # --------------------------------------
+    - name: Deploy to Server
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          cd ~/video-streaming
+          docker-compose down
+          docker-compose up -d
