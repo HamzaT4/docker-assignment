@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  auth:
+    build: ./auth
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: root
+
+  upload:
+    build: ./upload-web
+    ports:
+      - "3001:3000"
+    volumes:
+    - upload_temp:/app/temp-uploads 
+    environment:
+      AUTH_SERVICE: "http://auth:3000"
+      FILE_SERVICE: "http://file-system:3000"
+      DB_HOST: mysql
+
+  streaming:
+    build: ./streaming-web
+    ports:
+      - "3002:3000"
+    environment:
+      AUTH_SERVICE: "http://auth:3000"
+      FILE_SERVICE: "http://file-system:3000"
+      DB_HOST: mysql
+
+  file-system:
+    build: ./file-system
+    ports:
+      - "3003:3000"
+    volumes:
+      - uploaded_videos:/app/uploads  
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: videodb
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql 
+
+volumes:
+  mysql_data:
+  uploaded_videos:
+  upload_temp:
