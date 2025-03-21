@@ -78,26 +78,7 @@ jobs:
 
       - name: Run API tests
         run: |
-          echo "Starting tests..."
-          mocha --require esm --exit <<EOF
-          const assert = require('assert');
-          const axios = require('axios');
-        
-          describe('Services', () => {
-            it('Auth Service /login', async () => {
-              const res = await axios.post('http://localhost:3000/login', {
-                username: 'admin',
-                password: 'admin'
-              });
-              assert.equal(res.status, 200);
-            });
-
-            it('Upload Service health check', async () => {
-              const res = await axios.get('http://localhost:3001');
-              assert.equal(res.status, 200);
-            });
-          });
-          EOF
+          mocha --require esm tests/basic-test.js
 
   deploy:
     needs: [test]
