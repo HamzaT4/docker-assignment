@@ -59,26 +59,15 @@ jobs:
   test:
     needs: [build-push]
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: videodb
-        ports:
-          - 3306:3306
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: |
-          npm install -g mocha esm  # Install esm globally
-          npm install axios          # Install test dependencies
+        run: npm install mocha
 
-      - name: Run API tests
-        run: |
-          mocha --require esm tests/basic-test.js
+      - name: Run smoke tests
+        run: npx mocha tests/smoke-test.js
 
   deploy:
     needs: [test]
