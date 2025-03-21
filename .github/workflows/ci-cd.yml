@@ -75,7 +75,17 @@ jobs:
     steps:
       - name: Deploy via SSH
         run: |
-            echo "${{ secrets.AWS_SSH_KEY }}" > key.pem
-            chmod 600 key.pem
-            scp -o StrictHostKeyChecking=no -i key.pem docker-compose.yml ubuntu@${{ secrets.AWS_EC2_IP }}:~/docker-assignment/
-            ssh -i key.pem ubuntu@${{ secrets.AWS_EC2_IP }} "cd ~/docker-assignment && docker-compose pull && docker-compose up -d"
+          # Verify docker-compose.yml exists
+          ls -la docker-compose.yml
+          
+          # Copy compose file
+          scp -o StrictHostKeyChecking=no -i key.pem \
+            docker-compose.yml \
+            ubuntu@${{ secrets.AWS_EC2_IP }}:~/docker-assignment/
+      
+          # Execute commands
+          ssh -i key.pem ubuntu@${{ secrets.AWS_EC2_IP }} <<EOF
+          cd ~/docker-assignment
+          docker-compose pull
+          docker-compose up -d
+          EOF
