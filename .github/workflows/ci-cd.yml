@@ -73,12 +73,14 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     steps:
+      - name: List files
+        run: ls -la
       - name: Deploy via SSH
         run: |
-          # Verify docker-compose.yml exists
+         
           ls -la docker-compose.yml
           
-          # Copy compose file
+          
           scp -o StrictHostKeyChecking=no -i key.pem \
             docker-compose.yml \
             ubuntu@${{ secrets.AWS_EC2_IP }}:~/docker-assignment/
