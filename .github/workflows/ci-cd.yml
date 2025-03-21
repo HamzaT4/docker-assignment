@@ -73,14 +73,22 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v0.1.10
-        with:
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v0.1.10
+      with:
           host: ${{ secrets.AWS_EC2_IP }}
           username: ubuntu
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-           
+            # Fix permissions first
+            mkdir -p ~/.ssh
+            echo "${{ secrets.AWS_SSH_KEY }}" | base64 -d > ~/.ssh/key.pem
+            chmod 600 ~/.ssh/key.pem
+            
+            # Add host to known hosts
+            ssh-keyscan -H ${{ secrets.AWS_EC2_IP }} >> ~/.ssh/known_hosts
+            
+            # Deployment commands
             cd ~/docker-assignment
             docker-compose down
             docker-compose pull
